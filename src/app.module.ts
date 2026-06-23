@@ -13,9 +13,15 @@ import { StudentsModule } from './students/students.module';
       type: 'mysql',
       host: process.env.DB_HOST ?? 'localhost',
       port: Number(process.env.DB_PORT ?? 3306),
-      username: process.env.DB_USER ?? 'root',
+      username: process.env.DB_USERNAME ?? 'root',
       password: process.env.DB_PASSWORD ?? '',
-      database: process.env.DB_NAME ?? 'quan_ly_ky_tuc_xa',
+      database: process.env.DB_DATABASE ?? 'quan_ly_ky_tuc_xa',
+      ssl: process.env.DB_SSL === 'false',
+      extra: {
+        ssl: process.env.DB_SSL === 'false' ? {
+          rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED === 'false',
+        } : undefined,
+      },
       autoLoadEntities: true,
       synchronize: false,
     }),
