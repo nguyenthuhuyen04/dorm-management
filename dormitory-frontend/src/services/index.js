@@ -1,0 +1,13 @@
+export * as authService from "./authService";
+export * as userService from "./userService";
+export * as buildingService from "./buildingService";
+export * as roomService from "./roomService";
+export * as studentService from "./studentService";
+export * as contractService from "./contractService";
+export * as paymentService from "./paymentService";
+export * as utilityBillService from "./utilityBillService";
+export * as announcementService from "./announcementService";
+export * as regulationService from "./regulationService";
+export * as supportRequestService from "./supportRequestService";
+export * as roomChangeRequestService from "./roomChangeRequestService";
+export * as dashboardService from "./dashboardService";

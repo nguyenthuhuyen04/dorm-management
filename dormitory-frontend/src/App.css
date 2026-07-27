@@ -1,0 +1,32 @@
+body {
+  margin: 0;
+  font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: #f5f7fb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.ant-layout-sider-children {
+  display: flex;
+  flex-direction: column;
+}
+
+.ant-menu-dark,
+.ant-menu-dark .ant-menu-sub {
+  background: transparent;
+}
+
+.ant-menu-dark .ant-menu-item-selected {
+  background: rgba(24, 144, 255, 0.25) !important;
+  border-radius: 8px;
+}
+
+.ant-card {
+  border-radius: 14px !important;
+}
+
+.ant-statistic-title {
+  color: #6b7280 !important;
+}
