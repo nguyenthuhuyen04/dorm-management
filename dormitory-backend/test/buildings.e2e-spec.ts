@@ -76,7 +76,8 @@ describe('Buildings (e2e)', () => {
     const username = `manager_test_${randomSuffix()}`;
     const email = `manager_test_${randomSuffix()}@ktx.edu.vn`;
     const response = await request(app.getHttpServer())
-      .post('/api/auth/register')
+      .post('/api/users')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         username,
         password: 'Manager123!',
@@ -86,7 +87,7 @@ describe('Buildings (e2e)', () => {
       })
       .expect(201);
 
-    return response.body.user.id;
+    return response.body.id;
   }
 
   describe('GET /api/buildings', () => {

@@ -7,7 +7,6 @@ import { JwtService } from '@nestjs/jwt';
 import { compare } from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
 import { User, UserStatus } from '../users/user.entity';
 
 @Injectable()
@@ -16,10 +15,6 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
   ) {}
-
-  async register(registerDto: RegisterDto): Promise<User> {
-    return this.usersService.create(registerDto);
-  }
 
   private async verifyPassword(
     plainPassword: string,
@@ -48,16 +43,16 @@ export class AuthService {
   async validateUser(identifier: string, password: string): Promise<User> {
     const user = await this.usersService.findByUsernameOrEmail(identifier);
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Email hoặc mật khẩu không đúng.');
     }
 
     if (user.status !== UserStatus.ACTIVE) {
-      throw new ForbiddenException('User account is inactive');
+      throw new ForbiddenException('Tài khoản của bạn hiện không hoạt động.');
     }
 
     const passwordCheck = await this.verifyPassword(password, user.password);
     if (!passwordCheck.matches) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Email hoặc mật khẩu không đúng.');
     }
 
     if (passwordCheck.isLegacy) {

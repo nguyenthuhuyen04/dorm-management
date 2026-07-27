@@ -94,4 +94,29 @@ describe('Dashboard (e2e)', () => {
       .set('Authorization', `Bearer ${studentToken}`)
       .expect(403);
   });
+
+  it('[200] should return student dashboard for student', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/dashboard/student')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .expect(200);
+
+    expect(response.body).toHaveProperty('contract');
+    expect(response.body).toHaveProperty('payments');
+    expect(response.body).toHaveProperty('supportRequests');
+  });
+
+  it('[403] should forbid admin access to student dashboard', async () => {
+    await request(app.getHttpServer())
+      .get('/api/dashboard/student')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(403);
+  });
+
+  it('[403] should forbid manager access to student dashboard', async () => {
+    await request(app.getHttpServer())
+      .get('/api/dashboard/student')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .expect(403);
+  });
 });

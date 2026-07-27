@@ -6,6 +6,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { User } from '../users/user.entity';
+import { Building } from '../buildings/building.entity';
 import { TargetRole } from '../common/enums/user-role.enum';
 
 @Entity('announcements')
@@ -25,6 +26,9 @@ export class Announcement {
   @Column({ name: 'created_by', type: 'int' })
   createdBy!: number;
 
+  @Column({ name: 'building_id', type: 'int', nullable: true })
+  buildingId!: number | null;
+
   @Column({
     name: 'created_at',
     type: 'timestamp',
@@ -40,7 +44,11 @@ export class Announcement {
   })
   updatedAt!: Date;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'RESTRICT', onUpdate: 'CASCADE' })
   @JoinColumn({ name: 'created_by' })
   creator!: User;
+
+  @ManyToOne(() => Building, { onDelete: 'SET NULL', onUpdate: 'CASCADE' })
+  @JoinColumn({ name: 'building_id' })
+  building!: Building | null;
 }

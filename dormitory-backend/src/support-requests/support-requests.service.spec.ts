@@ -561,8 +561,14 @@ describe('SupportRequestsService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should allow only students to create requests', async () => {
-      const { service } = createServiceWithMocks();
+    it('should allow MANAGER to create requests', async () => {
+      const { service, dataSource } = createServiceWithMocks();
+      dataSource.manager.findOne = jest.fn((entity: any) => {
+        if (entity.name === 'Student') return Promise.resolve(mockStudent);
+        if (entity.name === 'Room') return Promise.resolve(mockRoom);
+        if (entity.name === 'Contract') return Promise.resolve(mockContract);
+        return Promise.resolve(null);
+      });
 
       await expect(
         service.create(
@@ -575,7 +581,7 @@ describe('SupportRequestsService', () => {
           },
           mockUser(2, UserRole.MANAGER),
         ),
-      ).rejects.toThrow(ForbiddenException);
+      ).resolves.toBeDefined();
     });
 
     it('should use transaction for creation', async () => {

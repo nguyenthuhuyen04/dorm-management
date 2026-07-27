@@ -94,12 +94,11 @@ export class AnnouncementsService {
       );
     }
 
-    // MANAGER: only see announcements where target_role = ALL or MANAGER
+    // MANAGER: only see announcements created by this manager
     if (currentUser.role === UserRole.MANAGER) {
-      queryBuilder.andWhere(
-        '(announcement.targetRole = :targetAll OR announcement.targetRole = :targetManager)',
-        { targetAll: TargetRole.ALL, targetManager: TargetRole.MANAGER },
-      );
+      queryBuilder.andWhere('announcement.createdBy = :createdBy', {
+        createdBy: currentUser.userId,
+      });
     }
 
     // Search
@@ -161,9 +160,11 @@ export class AnnouncementsService {
       }
     }
 
-    // MANAGER: only see announcements where target_role = ALL or MANAGER
+    // MANAGER: can see announcements targeted to ALL or MANAGER,
+    // or any announcement they created themselves
     if (currentUser.role === UserRole.MANAGER) {
       if (
+        announcement.createdBy !== currentUser.userId &&
         announcement.targetRole !== TargetRole.ALL &&
         announcement.targetRole !== TargetRole.MANAGER
       ) {

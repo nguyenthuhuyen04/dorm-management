@@ -263,18 +263,22 @@ describe('UsersController', () => {
     it('should create user successfully', async () => {
       usersService.create.mockResolvedValue(mockUser);
 
-      const result = await controller.create({
-        username: 'user1',
-        email: 'user1@example.com',
-        password: 'StrongPass1!',
-        full_name: 'User One',
-      } as any);
+      const result = await controller.create(
+        {
+          username: 'user1',
+          email: 'user1@example.com',
+          password: 'StrongPass1!',
+          full_name: 'User One',
+        } as any,
+        { user: { userId: 2, role: UserRole.ADMIN } } as any,
+      );
 
       expect(usersService.create).toHaveBeenCalledWith(
         expect.objectContaining({
           username: 'user1',
           email: 'user1@example.com',
         }),
+        expect.objectContaining({ userId: 2, role: UserRole.ADMIN }),
       );
       expect(result).toEqual(mockUser);
     });
@@ -285,12 +289,15 @@ describe('UsersController', () => {
       });
 
       await expect(
-        controller.create({
-          username: 'newuser',
-          email: 'user1@example.com',
-          password: 'StrongPass1!',
-          full_name: 'New User',
-        } as any),
+        controller.create(
+          {
+            username: 'newuser',
+            email: 'user1@example.com',
+            password: 'StrongPass1!',
+            full_name: 'New User',
+          } as any,
+          { user: { userId: 2, role: UserRole.ADMIN } } as any,
+        ),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -300,12 +307,15 @@ describe('UsersController', () => {
       });
 
       await expect(
-        controller.create({
-          username: 'user1',
-          email: 'newuser@example.com',
-          password: 'StrongPass1!',
-          full_name: 'New User',
-        } as any),
+        controller.create(
+          {
+            username: 'user1',
+            email: 'newuser@example.com',
+            password: 'StrongPass1!',
+            full_name: 'New User',
+          } as any,
+          { user: { userId: 2, role: UserRole.ADMIN } } as any,
+        ),
       ).rejects.toThrow(ConflictException);
     });
   });

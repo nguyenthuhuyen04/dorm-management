@@ -17,7 +17,7 @@ export const getDatabaseConfig = (
       configService.get<string>('DB_NAME') ?? configService.get<string>('DB_DATABASE'),
     entities: [__dirname + '/../**/*.entity{.ts,.js}'],
     synchronize: false,
-    logging: false,
+    logging: ['query', 'error', 'schema', 'warn'],
     charset: 'utf8mb4',
     ssl: sslEnabled ? { rejectUnauthorized: sslRejectUnauthorized } : false,
     extra: {

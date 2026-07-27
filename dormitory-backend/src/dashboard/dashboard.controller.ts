@@ -13,4 +13,11 @@ export class DashboardController {
   async findAll(@Req() req: Request): Promise<any> {
     return this.dashboardService.getDashboard(req.user as any);
   }
+
+  @Get('student')
+  @Roles(UserRole.STUDENT)
+  async getStudentDashboard(@Req() req: Request): Promise<any> {
+    const user = req.user as any;
+    return this.dashboardService.getStudentDashboard(user.userId);
+  }
 }

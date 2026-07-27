@@ -144,13 +144,14 @@ describe('DashboardService', () => {
     regulationsRepository.count.mockResolvedValue(2);
 
     dataSource.manager.query
-      .mockResolvedValueOnce([{ count: 3 }])
-      .mockResolvedValueOnce([{ count: 1 }])
-      .mockResolvedValueOnce([{ count: 3 }])
-      .mockResolvedValueOnce([{ count: 3 }])
-      .mockResolvedValueOnce([{ count: 3 }])
-      .mockResolvedValueOnce([{ count: 1 }])
-      .mockResolvedValueOnce([{ count: 1 }]);
+      .mockResolvedValueOnce([{ count: 3 }]) // roomsOccupied
+      .mockResolvedValueOnce([{ count: 1 }]) // roomsAvailable
+      .mockResolvedValueOnce([{ count: 3 }]) // studentsTotal
+      .mockResolvedValueOnce([{ count: 3 }]) // studentsActive
+      .mockResolvedValueOnce([{ count: 3 }]) // contractsActive
+      .mockResolvedValueOnce([{ count: 1 }]) // contractsExpired
+      .mockResolvedValueOnce([{ count: 1 }]) // paymentsOverdue
+      .mockResolvedValueOnce([{ count: 0 }]); // revenue
 
     const result = await service.getDashboard({
       userId: 1,
@@ -169,11 +170,151 @@ describe('DashboardService', () => {
     expect(result.payments.total).toBe(3);
     expect(result.payments.paid).toBe(1);
     expect(result.payments.pending).toBe(1);
+    expect(result.revenue.total).toBe(0);
     expect(result.utilityBills.total).toBe(3);
     expect(result.supportRequests.processing).toBe(1);
     expect(result.roomChangeRequests.approved).toBe(1);
     expect(result.announcements.total).toBe(2);
     expect(result.regulations.total).toBe(2);
+  });
+
+  it('should return revenue for admin dashboard', async () => {
+    usersRepository.count.mockResolvedValue(1);
+    buildingsRepository.count.mockResolvedValue(1);
+    roomsRepository.count.mockResolvedValue(2);
+    contractsRepository.count.mockResolvedValue(1);
+    paymentsRepository.count
+      .mockResolvedValueOnce(3)
+      .mockResolvedValueOnce(2)
+      .mockResolvedValueOnce(1);
+    utilityBillsRepository.count.mockResolvedValue(1);
+    supportRequestsRepository.count.mockResolvedValue(1);
+    roomChangeRequestsRepository.count.mockResolvedValue(0);
+    announcementsRepository.count.mockResolvedValue(1);
+    regulationsRepository.count.mockResolvedValue(1);
+    // 8 countQuery calls: roomsOccupied, roomsAvailable, studentsTotal, studentsActive,
+    // contractsActive, contractsExpired, paymentsOverdue, revenue
+    dataSource.manager.query
+      .mockResolvedValueOnce([{ count: 1 }])
+      .mockResolvedValueOnce([{ count: 1 }])
+      .mockResolvedValueOnce([{ count: 1 }])
+      .mockResolvedValueOnce([{ count: 1 }])
+      .mockResolvedValueOnce([{ count: 1 }])
+      .mockResolvedValueOnce([{ count: 1 }])
+      .mockResolvedValueOnce([{ count: 1 }])
+      .mockResolvedValueOnce([{ count: 15000000 }]);
+
+    const result = await service.getDashboard({
+      userId: 1,
+      role: UserRole.ADMIN,
+    });
+
+    expect(result.revenue.total).toBe(15000000);
+    expect(result.revenue).toBeDefined();
+  });
+
+  it('should return revenue for manager dashboard', async () => {
+    regulationsRepository.count.mockResolvedValue(1);
+    // 29 countQuery calls, revenue is #17 (0-indexed: 16)
+    dataSource.manager.query
+      .mockResolvedValueOnce([{ count: 1 }]) // 1 buildingsTotal
+      .mockResolvedValueOnce([{ count: 2 }]) // 2 roomsTotal
+      .mockResolvedValueOnce([{ count: 0 }]) // 3 roomsMaintenance
+      .mockResolvedValueOnce([{ count: 1 }]) // 4 roomsOccupied
+      .mockResolvedValueOnce([{ count: 1 }]) // 5 roomsAvailable
+      .mockResolvedValueOnce([{ count: 1 }]) // 6 usersTotal
+      .mockResolvedValueOnce([{ count: 1 }]) // 7 usersActive
+      .mockResolvedValueOnce([{ count: 1 }]) // 8 studentsTotal
+      .mockResolvedValueOnce([{ count: 1 }]) // 9 studentsActive
+      .mockResolvedValueOnce([{ count: 1 }]) // 10 contractsTotal
+      .mockResolvedValueOnce([{ count: 1 }]) // 11 contractsActive
+      .mockResolvedValueOnce([{ count: 0 }]) // 12 contractsExpired
+      .mockResolvedValueOnce([{ count: 1 }]) // 13 paymentsTotal
+      .mockResolvedValueOnce([{ count: 1 }]) // 14 paymentsPaid
+      .mockResolvedValueOnce([{ count: 0 }]) // 15 paymentsPending
+      .mockResolvedValueOnce([{ count: 0 }]) // 16 paymentsOverdue
+      .mockResolvedValueOnce([{ count: 8000000 }]) // 17 revenue
+      .mockResolvedValueOnce([{ count: 1 }]) // 18 utilityBillsTotal
+      .mockResolvedValueOnce([{ count: 1 }]) // 19 utilityBillsPublished
+      .mockResolvedValueOnce([{ count: 0 }]) // 20 utilityBillsDraft
+      .mockResolvedValueOnce([{ count: 1 }]) // 21 supportRequestsTotal
+      .mockResolvedValueOnce([{ count: 1 }]) // 22 supportRequestsPending
+      .mockResolvedValueOnce([{ count: 0 }]) // 23 supportRequestsProcessing
+      .mockResolvedValueOnce([{ count: 0 }]) // 24 supportRequestsResolved
+      .mockResolvedValueOnce([{ count: 1 }]) // 25 roomChangeRequestsTotal
+      .mockResolvedValueOnce([{ count: 1 }]) // 26 requestPendingManager
+      .mockResolvedValueOnce([{ count: 0 }]) // 27 requestApprovedManager
+      .mockResolvedValueOnce([{ count: 0 }]) // 28 requestRejectedManager
+      .mockResolvedValueOnce([{ count: 2 }]); // 29 announcementsTotal
+
+    const result = await service.getDashboard({
+      userId: 2,
+      role: UserRole.MANAGER,
+    });
+
+    expect(result.revenue.total).toBe(8000000);
+    expect(result.revenue).toBeDefined();
+  });
+
+  it('should return student dashboard with empty data', async () => {
+    dataSource.manager.query
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    const result = await service.getStudentDashboard(1);
+
+    expect(result.contract).toBeNull();
+    expect(result.payments.totalAmount).toBe(0);
+    expect(result.supportRequests.total).toBe(0);
+  });
+
+  it('should return student dashboard with full data', async () => {
+    dataSource.manager.query
+      .mockResolvedValueOnce([{ id: 1 }])
+      .mockResolvedValueOnce([
+        {
+          id: 1,
+          contractCode: 'CT-001',
+          startDate: '2024-09-01',
+          endDate: '2025-08-31',
+          deposit: '5000000.00',
+          status: 'ACTIVE',
+          roomNumber: 'A101',
+          floor: 1,
+          buildingName: 'Tòa A',
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          totalAmount: 15000000,
+          paidAmount: 10000000,
+          unpaidAmount: 5000000,
+          totalCount: 4,
+          paidCount: 3,
+          unpaidCount: 1,
+          overdueCount: 0,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          total: 2,
+          pending: 1,
+          resolved: 1,
+        },
+      ]);
+
+    const result = await service.getStudentDashboard(1);
+
+    expect(result.contract).toBeDefined();
+    expect(result.contract.contractCode).toBe('CT-001');
+    expect(result.contract.room.roomNumber).toBe('A101');
+    expect(result.contract.room.buildingName).toBe('Tòa A');
+    expect(result.payments.totalAmount).toBe(15000000);
+    expect(result.payments.paidAmount).toBe(10000000);
+    expect(result.payments.paidCount).toBe(3);
+    expect(result.supportRequests.total).toBe(2);
+    expect(result.supportRequests.pending).toBe(1);
   });
 
   it('should return manager dashboard aggregates', async () => {
@@ -194,6 +335,7 @@ describe('DashboardService', () => {
       .mockResolvedValueOnce([{ count: 1 }]) // paymentsPaid
       .mockResolvedValueOnce([{ count: 0 }]) // paymentsPending
       .mockResolvedValueOnce([{ count: 0 }]) // paymentsOverdue
+      .mockResolvedValueOnce([{ count: 1 }]) // revenue
       .mockResolvedValueOnce([{ count: 1 }]) // utilityBillsTotal
       .mockResolvedValueOnce([{ count: 1 }]) // utilityBillsPublished
       .mockResolvedValueOnce([{ count: 0 }]) // utilityBillsDraft

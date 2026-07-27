@@ -68,12 +68,15 @@ describe('UsersService', () => {
       repository.create.mockImplementation((user: any) => user);
       repository.save.mockResolvedValue(mockUser);
 
-      const result = await service.create({
-        username: 'user1',
-        email: 'user1@example.com',
-        password: 'StrongPass1!',
-        full_name: 'User One',
-      } as any);
+      const result = await service.create(
+        {
+          username: 'user1',
+          email: 'user1@example.com',
+          password: 'StrongPass1!',
+          full_name: 'User One',
+        } as any,
+        { role: UserRole.ADMIN } as any,
+      );
 
       expect(hash).toHaveBeenCalledWith('StrongPass1!', 10);
       expect(repository.save).toHaveBeenCalled();
@@ -84,12 +87,15 @@ describe('UsersService', () => {
       repository.findByEmail.mockResolvedValue(mockUser);
 
       await expect(
-        service.create({
-          username: 'newuser',
-          email: 'user1@example.com',
-          password: 'StrongPass1!',
-          full_name: 'New User',
-        } as any),
+        service.create(
+          {
+            username: 'newuser',
+            email: 'user1@example.com',
+            password: 'StrongPass1!',
+            full_name: 'New User',
+          } as any,
+          { role: UserRole.ADMIN } as any,
+        ),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -98,12 +104,15 @@ describe('UsersService', () => {
       repository.findByUsername.mockResolvedValue(mockUser);
 
       await expect(
-        service.create({
-          username: 'user1',
-          email: 'newuser@example.com',
-          password: 'StrongPass1!',
-          full_name: 'New User',
-        } as any),
+        service.create(
+          {
+            username: 'user1',
+            email: 'newuser@example.com',
+            password: 'StrongPass1!',
+            full_name: 'New User',
+          } as any,
+          { role: UserRole.ADMIN } as any,
+        ),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -113,12 +122,15 @@ describe('UsersService', () => {
       repository.create.mockImplementation((user: any) => user);
       repository.save.mockResolvedValue(mockUser);
 
-      await service.create({
-        username: 'user1',
-        email: 'user1@example.com',
-        password: 'StrongPass1!',
-        full_name: 'User One',
-      } as any);
+      await service.create(
+        {
+          username: 'user1',
+          email: 'user1@example.com',
+          password: 'StrongPass1!',
+          full_name: 'User One',
+        } as any,
+        { role: UserRole.ADMIN } as any,
+      );
 
       expect(hash).toHaveBeenCalledWith('StrongPass1!', 10);
     });
@@ -133,12 +145,15 @@ describe('UsersService', () => {
         status: UserStatus.ACTIVE,
       });
 
-      await service.create({
-        username: 'user1',
-        email: 'user1@example.com',
-        password: 'StrongPass1!',
-        full_name: 'User One',
-      } as any);
+      await service.create(
+        {
+          username: 'user1',
+          email: 'user1@example.com',
+          password: 'StrongPass1!',
+          full_name: 'User One',
+        } as any,
+        { role: UserRole.ADMIN } as any,
+      );
 
       expect(repository.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -154,18 +169,39 @@ describe('UsersService', () => {
       repository.create.mockImplementation((user: any) => user);
       repository.save.mockResolvedValue(mockUser);
 
-      await service.create({
-        username: 'user1',
-        email: 'user1@example.com',
-        password: 'StrongPass1!',
-        full_name: 'User One',
-      } as any);
+      await service.create(
+        {
+          username: 'user1',
+          email: 'user1@example.com',
+          password: 'StrongPass1!',
+          full_name: 'User One',
+        } as any,
+        { role: UserRole.ADMIN } as any,
+      );
 
       expect(repository.create).toHaveBeenCalledWith(
         expect.objectContaining({
           fullName: 'User One',
         }),
       );
+    });
+
+    it('should reject manager/admin roles when caller is not an admin', async () => {
+      repository.findByEmail.mockResolvedValue(null);
+      repository.findByUsername.mockResolvedValue(null);
+
+      await expect(
+        service.create(
+          {
+            username: 'manageruser',
+            email: 'manager@example.com',
+            password: 'StrongPass1!',
+            full_name: 'Manager User',
+            role: UserRole.MANAGER,
+          } as any,
+          { role: UserRole.STUDENT } as any,
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 

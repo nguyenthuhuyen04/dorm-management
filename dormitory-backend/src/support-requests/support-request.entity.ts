@@ -1,4 +1,10 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Student } from '../students/student.entity';
 import { Room } from '../rooms/room.entity';
 import { User } from '../users/user.entity';
@@ -27,27 +33,51 @@ export class SupportRequest {
   @Column({ name: 'reply', type: 'text', nullable: true })
   reply!: string | null;
 
-  @Column({ name: 'status', type: 'varchar', length: 20, default: SupportStatus.PENDING })
+  @Column({
+    name: 'status',
+    type: 'varchar',
+    length: 20,
+    default: SupportStatus.PENDING,
+  })
   status!: SupportStatus;
 
   @Column({ name: 'handled_by', type: 'int', nullable: true })
   handledBy!: number | null;
 
-  @Column({ name: 'created_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({
+    name: 'created_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   createdAt!: Date;
 
-  @Column({ name: 'updated_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({
+    name: 'updated_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+    onUpdate: 'CURRENT_TIMESTAMP',
+  })
   updatedAt!: Date;
 
-  @ManyToOne(() => Student, (student) => student.supportRequests)
+  @ManyToOne(() => Student, (student) => student.supportRequests, {
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  })
   @JoinColumn({ name: 'student_id' })
   student!: Student;
 
-  @ManyToOne(() => Room, (room) => room.supportRequests)
+  @ManyToOne(() => Room, (room) => room.supportRequests, {
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  })
   @JoinColumn({ name: 'room_id' })
   room!: Room;
 
-  @ManyToOne(() => User, { nullable: true })
+  @ManyToOne(() => User, {
+    nullable: true,
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE',
+  })
   @JoinColumn({ name: 'handled_by' })
   handler!: User | null;
 }

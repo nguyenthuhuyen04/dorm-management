@@ -1,4 +1,3 @@
-CREATE DATABASE IF NOT EXISTS quan_ly_ky_tuc_xa;
 USE quan_ly_ky_tuc_xa;
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -364,6 +363,9 @@ CREATE TABLE room_change_requests (
         ON UPDATE CASCADE
         ON DELETE SET NULL
 );
+-- =========================
+-- USERS
+-- =========================
 INSERT INTO users(username, password, full_name, email, phone, role)
 VALUES
 ('admin', 'Admin123!', 'Nguyễn Văn Admin', 'admin@ktx.edu.vn', '0901111111', 'ADMIN'),
@@ -495,3 +497,12 @@ VALUES
 (1,1,2,'Muốn ở cùng bạn','PENDING',NULL),
 
 (2,3,4,'Phòng đông người','APPROVED',2);
+
+ALTER TABLE announcements
+ADD COLUMN building_id INT NULL AFTER created_by;
+ALTER TABLE announcements
+ADD CONSTRAINT fk_announcement_building
+FOREIGN KEY (building_id)
+REFERENCES buildings(id)
+ON DELETE SET NULL
+ON UPDATE CASCADE;

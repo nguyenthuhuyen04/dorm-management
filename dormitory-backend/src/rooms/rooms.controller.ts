@@ -48,6 +48,14 @@ export class RoomsController {
     );
   }
 
+  @Get('available-for-room-change')
+  @Roles(UserRole.STUDENT)
+  async getAvailableForRoomChange(
+    @Req() req: any,
+  ): Promise<Awaited<ReturnType<RoomsService['getAvailableRoomsForChange']>>> {
+    return this.roomsService.getAvailableRoomsForChange(req.user);
+  }
+
   @Get(':id')
   @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.STUDENT)
   async findOne(

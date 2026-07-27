@@ -1,4 +1,11 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Building } from '../buildings/building.entity';
 import { Contract } from '../contracts/contract.entity';
 import { UtilityBill } from '../utility-bills/utility-bill.entity';
@@ -32,13 +39,25 @@ export class Room {
   @Column({ name: 'room_fee', type: 'decimal', precision: 10, scale: 2 })
   roomFee!: number;
 
-  @Column({ name: 'status', type: 'varchar', length: 20, default: RoomStatus.ACTIVE })
+  @Column({
+    name: 'status',
+    type: 'varchar',
+    length: 20,
+    default: RoomStatus.ACTIVE,
+  })
   status!: RoomStatus;
 
-  @Column({ name: 'created_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({
+    name: 'created_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   createdAt!: Date;
 
-  @ManyToOne(() => Building, (building) => building.rooms)
+  @ManyToOne(() => Building, (building) => building.rooms, {
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  })
   @JoinColumn({ name: 'building_id' })
   building!: Building;
 
@@ -51,9 +70,15 @@ export class Room {
   @OneToMany(() => SupportRequest, (supportRequest) => supportRequest.room)
   supportRequests!: SupportRequest[];
 
-  @OneToMany(() => RoomChangeRequest, (roomChangeRequest) => roomChangeRequest.currentRoom)
+  @OneToMany(
+    () => RoomChangeRequest,
+    (roomChangeRequest) => roomChangeRequest.currentRoom,
+  )
   currentRoomChangeRequests!: RoomChangeRequest[];
 
-  @OneToMany(() => RoomChangeRequest, (roomChangeRequest) => roomChangeRequest.requestedRoom)
+  @OneToMany(
+    () => RoomChangeRequest,
+    (roomChangeRequest) => roomChangeRequest.requestedRoom,
+  )
   requestedRoomChangeRequests!: RoomChangeRequest[];
 }

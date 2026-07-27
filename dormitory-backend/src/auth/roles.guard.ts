@@ -35,14 +35,14 @@ export class RolesGuard implements CanActivate {
 
     if (!user?.role) {
       throw new ForbiddenException(
-        'You do not have permission to access this resource.',
+        'Bạn không có quyền thực hiện chức năng này.',
       );
     }
 
     const allowed = requiredRoles.includes(user.role as UserRole);
     if (!allowed) {
       throw new ForbiddenException(
-        'You do not have permission to access this resource.',
+        'Bạn không có quyền thực hiện chức năng này.',
       );
     }
 

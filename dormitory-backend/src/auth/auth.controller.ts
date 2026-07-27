@@ -9,25 +9,12 @@ import {
 import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
 import { Public } from './public.decorator';
 import { User } from '../users/user.entity';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
-
-  @Post('register')
-  @Public()
-  async register(
-    @Body() registerDto: RegisterDto,
-  ): Promise<{ message: string; user: User }> {
-    const user = await this.authService.register(registerDto);
-    return {
-      message: 'Register successfully',
-      user,
-    };
-  }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)

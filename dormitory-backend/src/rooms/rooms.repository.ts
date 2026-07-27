@@ -58,6 +58,27 @@ export class RoomsRepository extends Repository<Room> {
     return Number(result?.[0]?.count ?? 0);
   }
 
+  async getActiveOccupancyForRooms(
+    roomIds: number[],
+  ): Promise<Map<number, number>> {
+    if (roomIds.length === 0) return new Map();
+
+    const placeholders = roomIds.map(() => '?').join(',');
+    const result = await this.manager.query(
+      `SELECT room_id, COUNT(*) AS count FROM contracts WHERE room_id IN (${placeholders}) AND status = ? GROUP BY room_id`,
+      [...roomIds, ContractStatus.ACTIVE],
+    );
+
+    const occupancyMap = new Map<number, number>();
+    for (const roomId of roomIds) {
+      occupancyMap.set(roomId, 0);
+    }
+    for (const row of result ?? []) {
+      occupancyMap.set(Number(row.room_id), Number(row.count));
+    }
+    return occupancyMap;
+  }
+
   async hasStudentAccessToRoom(
     roomId: number,
     userId: number,

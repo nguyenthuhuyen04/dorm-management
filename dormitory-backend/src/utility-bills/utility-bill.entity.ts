@@ -79,14 +79,18 @@ export class UtilityBill {
     name: 'updated_at',
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP',
+    onUpdate: 'CURRENT_TIMESTAMP',
   })
   updatedAt!: Date;
 
-  @ManyToOne(() => Room, (room) => room.utilityBills)
+  @ManyToOne(() => Room, (room) => room.utilityBills, {
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  })
   @JoinColumn({ name: 'room_id' })
   room!: Room;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'RESTRICT', onUpdate: 'CASCADE' })
   @JoinColumn({ name: 'created_by' })
   creator!: User;
 

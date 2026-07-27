@@ -5,12 +5,11 @@ import { UserRole, UserStatus } from '../users/user.entity';
 
 describe('AuthController', () => {
   let controller: AuthController;
-  let authService: { register: jest.Mock; login: jest.Mock };
+  let authService: { login: jest.Mock };
   let response: Partial<Response>;
 
   beforeEach(() => {
     authService = {
-      register: jest.fn(),
       login: jest.fn(),
     } as any;
     controller = new AuthController(authService as any);
@@ -18,30 +17,6 @@ describe('AuthController', () => {
       cookie: jest.fn(),
       clearCookie: jest.fn(),
     };
-  });
-
-  it('registers a new user and returns success message', async () => {
-    const expectedUser = {
-      id: 1,
-      username: 'newuser',
-      email: 'newuser@test.com',
-      role: UserRole.STUDENT,
-      status: UserStatus.ACTIVE,
-    };
-    authService.register.mockResolvedValue(expectedUser);
-
-    await expect(
-      controller.register({
-        username: 'newuser',
-        full_name: 'New User',
-        email: 'newuser@test.com',
-        password: 'Password1!',
-      } as any),
-    ).resolves.toEqual({
-      message: 'Register successfully',
-      user: expectedUser,
-    });
-    expect(authService.register).toHaveBeenCalledTimes(1);
   });
 
   it('logs in and sets the Authentication cookie', async () => {

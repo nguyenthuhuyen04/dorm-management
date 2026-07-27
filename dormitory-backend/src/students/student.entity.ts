@@ -1,4 +1,11 @@
-import { Column, Entity, JoinColumn, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  OneToMany,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { User } from '../users/user.entity';
 import { Contract } from '../contracts/contract.entity';
 import { Payment } from '../payments/payment.entity';
@@ -35,10 +42,18 @@ export class Student {
   @Column({ name: 'parent_phone', type: 'varchar', length: 15, nullable: true })
   parentPhone!: string | null;
 
-  @Column({ name: 'created_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({
+    name: 'created_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   createdAt!: Date;
 
-  @OneToOne(() => User, (user) => user.student, { nullable: true })
+  @OneToOne(() => User, (user) => user.student, {
+    nullable: true,
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  })
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
@@ -51,6 +66,9 @@ export class Student {
   @OneToMany(() => SupportRequest, (supportRequest) => supportRequest.student)
   supportRequests!: SupportRequest[];
 
-  @OneToMany(() => RoomChangeRequest, (roomChangeRequest) => roomChangeRequest.student)
+  @OneToMany(
+    () => RoomChangeRequest,
+    (roomChangeRequest) => roomChangeRequest.student,
+  )
   roomChangeRequests!: RoomChangeRequest[];
 }

@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -14,7 +13,7 @@ import { SupportRequest } from './support-request.entity';
 import { Student } from '../students/student.entity';
 import { Room } from '../rooms/room.entity';
 import { Contract } from '../contracts/contract.entity';
-import { User, UserRole } from '../users/user.entity';
+import { UserRole } from '../users/user.entity';
 import { SupportStatus, ContractStatus } from '../common/enums/user-role.enum';
 
 interface AuthenticatedUser {
@@ -154,7 +153,6 @@ export class SupportRequestsService {
 
     // Role-based scoping
     if (currentUser.role === UserRole.STUDENT) {
-      // Student can only see their own requests
       const student = await this.dataSource.manager.findOne(Student, {
         where: { userId: currentUser.userId },
       });
@@ -165,12 +163,10 @@ export class SupportRequestsService {
         studentId: student.id,
       });
     } else if (currentUser.role === UserRole.MANAGER) {
-      // Manager can only see requests in their building
       qb.andWhere('building.manager_id = :managerId', {
         managerId: currentUser.userId,
       });
     }
-    // ADMIN sees all
 
     // Search
     if (query.search) {
@@ -261,7 +257,6 @@ export class SupportRequestsService {
       throw new NotFoundException('Support request not found');
     }
 
-    // Role-based access
     if (currentUser.role === UserRole.STUDENT) {
       const student = await this.dataSource.manager.findOne(Student, {
         where: { userId: currentUser.userId },
@@ -286,7 +281,6 @@ export class SupportRequestsService {
         throw new ForbiddenException('Access denied');
       }
     }
-    // ADMIN has access
 
     return this.toSupportRequestResponse(request);
   }
@@ -295,26 +289,32 @@ export class SupportRequestsService {
     createSupportRequestDto: CreateSupportRequestDto,
     currentUser: AuthenticatedUser,
   ): Promise<SupportRequestResponse> {
-    // Only students can create support requests
-    if (currentUser.role !== UserRole.STUDENT) {
-      throw new ForbiddenException('Only students can create support requests');
+    let student: Student | null = null;
+
+    if (currentUser.role === UserRole.STUDENT) {
+      student = await this.dataSource.manager.findOne(Student, {
+        where: { userId: currentUser.userId },
+        relations: ['user'],
+      });
+      if (!student) {
+        throw new NotFoundException('Student not found');
+      }
+
+      if (createSupportRequestDto.studentId !== student.id) {
+        throw new ForbiddenException(
+          'You can only create requests for yourself',
+        );
+      }
+    } else {
+      student = await this.dataSource.manager.findOne(Student, {
+        where: { id: createSupportRequestDto.studentId },
+        relations: ['user'],
+      });
+      if (!student) {
+        throw new NotFoundException('Student not found');
+      }
     }
 
-    // Validate student exists and belongs to current user
-    const student = await this.dataSource.manager.findOne(Student, {
-      where: { userId: currentUser.userId },
-      relations: ['user'],
-    });
-    if (!student) {
-      throw new NotFoundException('Student not found');
-    }
-
-    // Ensure the studentId in DTO matches the logged-in student
-    if (createSupportRequestDto.studentId !== student.id) {
-      throw new ForbiddenException('You can only create requests for yourself');
-    }
-
-    // Validate room exists
     const room = await this.dataSource.manager.findOne(Room, {
       where: { id: createSupportRequestDto.roomId },
     });
@@ -322,7 +322,6 @@ export class SupportRequestsService {
       throw new NotFoundException('Room not found');
     }
 
-    // Validate that the student has an active contract in this room
     const contract = await this.dataSource.manager.findOne(Contract, {
       where: {
         studentId: student.id,
@@ -338,7 +337,6 @@ export class SupportRequestsService {
       );
     }
 
-    // Validate category, title, and description are not empty
     if (
       !createSupportRequestDto.category ||
       !createSupportRequestDto.category.trim()
@@ -360,14 +358,12 @@ export class SupportRequestsService {
       throw new BadRequestException('Description cannot be empty');
     }
 
-    // Set status to PENDING if not provided or invalid
     const status =
       createSupportRequestDto.status &&
       Object.values(SupportStatus).includes(createSupportRequestDto.status)
         ? createSupportRequestDto.status
         : SupportStatus.PENDING;
 
-    // Only allow PENDING status on creation
     if (status !== SupportStatus.PENDING) {
       throw new BadRequestException('Status must be PENDING for new requests');
     }
@@ -390,7 +386,6 @@ export class SupportRequestsService {
 
         const savedRequest = await requestRepo.save(request);
 
-        // Fetch with relations for response
         const fullRequest = await requestRepo.findOne({
           where: { id: savedRequest.id },
           relations: [
@@ -421,7 +416,6 @@ export class SupportRequestsService {
       throw new NotFoundException('Support request not found');
     }
 
-    // Only managers and admins can update requests (reply/change status)
     if (
       currentUser.role !== UserRole.MANAGER &&
       currentUser.role !== UserRole.ADMIN
@@ -431,14 +425,12 @@ export class SupportRequestsService {
       );
     }
 
-    // Cannot update if request is already DONE
     if (request.status === SupportStatus.DONE) {
       throw new BadRequestException(
         'Cannot update a request that is already DONE',
       );
     }
 
-    // Manager must be responsible for the building
     if (currentUser.role === UserRole.MANAGER) {
       const hasAccess =
         await this.supportRequestsRepository.managerHasBuildingAccess(
@@ -451,11 +443,9 @@ export class SupportRequestsService {
         );
       }
     }
-    // ADMIN can update any request
 
-    // Update fields
     if (updateSupportRequestDto.reply !== undefined) {
-      request.reply = updateSupportRequestDto.reply.trim() || null;
+      request.reply = updateSupportRequestDto.reply?.trim() || null;
     }
 
     if (updateSupportRequestDto.status !== undefined) {
@@ -465,16 +455,18 @@ export class SupportRequestsService {
         throw new BadRequestException('Invalid status');
       }
       request.status = updateSupportRequestDto.status;
-      // If status is set to DONE, we could set handledBy to current user if not already set
       if (request.status === SupportStatus.DONE && !request.handledBy) {
         request.handledBy = currentUser.userId;
       }
     }
 
-    // Set handledBy to current user if not set (for tracking who processed it)
     if (!request.handledBy) {
       request.handledBy = currentUser.userId;
     }
+
+    // Clear handler relation to avoid FK conflict when saving
+    // TypeORM tries to persist the relation object which conflicts with handledBy column
+    request.handler = null as any;
 
     return await this.dataSource.transaction(
       async (transactionalEntityManager) => {
@@ -482,7 +474,6 @@ export class SupportRequestsService {
           transactionalEntityManager.getRepository(SupportRequest);
         await requestRepo.save(request);
 
-        // Fetch with relations for response
         const updatedRequest = await requestRepo.findOne({
           where: { id },
           relations: [
@@ -512,14 +503,10 @@ export class SupportRequestsService {
       throw new NotFoundException('Support request not found');
     }
 
-    // Only admins can delete requests
     if (currentUser.role !== UserRole.ADMIN) {
       throw new ForbiddenException('Only admins can delete support requests');
     }
 
-    // Cannot delete if request is DONE (or maybe PROCESSING? Let's allow deleting only PENDING and PROCESSING?)
-    // Based on requirements: "Không cho Student sửa request đã được xử lý" and "Không xử lý request đã DONE"
-    // For deletion, we'll allow deleting PENDING and PROCESSING, but not DONE
     if (request.status === SupportStatus.DONE) {
       throw new BadRequestException(
         'Cannot delete a request that is already DONE',

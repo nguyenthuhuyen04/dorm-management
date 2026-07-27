@@ -59,15 +59,21 @@ export class Contract {
   })
   createdAt!: Date;
 
-  @ManyToOne(() => Student, (student) => student.contracts)
+  @ManyToOne(() => Student, (student) => student.contracts, {
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  })
   @JoinColumn({ name: 'student_id' })
   student!: Student;
 
-  @ManyToOne(() => Room, (room) => room.contracts)
+  @ManyToOne(() => Room, (room) => room.contracts, {
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  })
   @JoinColumn({ name: 'room_id' })
   room!: Room;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'RESTRICT', onUpdate: 'CASCADE' })
   @JoinColumn({ name: 'created_by' })
   creator!: User;
 

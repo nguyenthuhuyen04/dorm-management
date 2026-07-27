@@ -71,6 +71,129 @@ export class DashboardService {
     return this.getAdminDashboard();
   }
 
+  async getStudentDashboard(userId: number) {
+    // Find student record
+    const studentQuery = await this.dataSource.manager.query(
+      `SELECT id FROM students WHERE user_id = ?`,
+      [userId],
+    );
+    if (!studentQuery || studentQuery.length === 0) {
+      return {
+        contract: null,
+        payments: {
+          totalAmount: 0,
+          paidAmount: 0,
+          unpaidAmount: 0,
+          paidCount: 0,
+          unpaidCount: 0,
+          overdueCount: 0,
+        },
+        supportRequests: {
+          total: 0,
+          pending: 0,
+          resolved: 0,
+        },
+      };
+    }
+    const studentId = Number(studentQuery[0].id);
+
+    // Get active contract with room and building info
+    const contractData = await this.dataSource.manager.query(
+      `SELECT
+        c.id,
+        c.contract_code AS contractCode,
+        c.start_date AS startDate,
+        c.end_date AS endDate,
+        c.deposit,
+        c.status,
+        r.room_number AS roomNumber,
+        r.floor,
+        b.building_name AS buildingName
+      FROM contracts c
+      INNER JOIN rooms r ON r.id = c.room_id
+      INNER JOIN buildings b ON b.id = r.building_id
+      WHERE c.student_id = ?
+        AND c.status = ?
+      ORDER BY c.created_at DESC
+      LIMIT 1`,
+      [studentId, ContractStatus.ACTIVE],
+    );
+
+    let contract: any = null;
+    if (contractData && contractData.length > 0) {
+      const c = contractData[0];
+      contract = {
+        id: c.id,
+        contractCode: c.contractCode,
+        startDate: c.startDate,
+        endDate: c.endDate,
+        deposit: Number(c.deposit),
+        status: c.status,
+        room: {
+          roomNumber: c.roomNumber,
+          buildingName: c.buildingName,
+          floor: c.floor,
+        },
+      };
+    }
+
+    // Aggregate payments
+    const paymentAgg = await this.dataSource.manager.query(
+      `SELECT
+        COALESCE(SUM(total_amount), 0) AS totalAmount,
+        COALESCE(SUM(CASE WHEN status = ? THEN total_amount ELSE 0 END), 0) AS paidAmount,
+        COALESCE(SUM(CASE WHEN status IN (?, ?) THEN total_amount ELSE 0 END), 0) AS unpaidAmount,
+        COUNT(*) AS totalCount,
+        COUNT(CASE WHEN status = ? THEN 1 END) AS paidCount,
+        COUNT(CASE WHEN status IN (?, ?) THEN 1 END) AS unpaidCount,
+        COUNT(CASE WHEN status != ? AND due_date < CURRENT_DATE THEN 1 END) AS overdueCount
+      FROM payments
+      WHERE student_id = ?`,
+      [
+        PaymentStatus.PAID,
+        PaymentStatus.UNPAID,
+        PaymentStatus.PENDING,
+        PaymentStatus.PAID,
+        PaymentStatus.UNPAID,
+        PaymentStatus.PENDING,
+        PaymentStatus.PAID,
+        studentId,
+      ],
+    );
+
+    const p = paymentAgg[0];
+
+    // Count support requests
+    const supportAgg = await this.dataSource.manager.query(
+      `SELECT
+        COUNT(*) AS total,
+        COUNT(CASE WHEN status = ? THEN 1 END) AS pending,
+        COUNT(CASE WHEN status = ? THEN 1 END) AS resolved
+      FROM support_requests
+      WHERE student_id = ?`,
+      [SupportStatus.PENDING, SupportStatus.DONE, studentId],
+    );
+
+    const s = supportAgg[0];
+
+    return {
+      contract,
+      payments: {
+        totalAmount: Number(p.totalAmount),
+        paidAmount: Number(p.paidAmount),
+        unpaidAmount: Number(p.unpaidAmount),
+        paidCount: Number(p.paidCount),
+        unpaidCount: Number(p.unpaidCount),
+        overdueCount: Number(p.overdueCount),
+      },
+      supportRequests: {
+        total: Number(s.total),
+        pending: Number(s.pending),
+        resolved: Number(s.resolved),
+      },
+    };
+  }
+
   private async getAdminDashboard() {
     const [usersTotal, admins, managers, students, activeUsers, inactiveUsers] =
       await Promise.all([
@@ -141,23 +264,34 @@ export class DashboardService {
         ),
       ]);
 
-    const [paymentsTotal, paymentsPaid, paymentsPending, paymentsOverdue] =
-      await Promise.all([
-        this.paymentsRepository.count(),
-        this.paymentsRepository.count({
-          where: { status: PaymentStatus.PAID },
-        }),
-        this.paymentsRepository.count({
-          where: { status: PaymentStatus.PENDING },
-        }),
-        this.countQuery(
-          `SELECT COUNT(*) AS count
+    const [
+      paymentsTotal,
+      paymentsPaid,
+      paymentsPending,
+      paymentsOverdue,
+      revenue,
+    ] = await Promise.all([
+      this.paymentsRepository.count(),
+      this.paymentsRepository.count({
+        where: { status: PaymentStatus.PAID },
+      }),
+      this.paymentsRepository.count({
+        where: { status: PaymentStatus.PENDING },
+      }),
+      this.countQuery(
+        `SELECT COUNT(*) AS count
            FROM payments p
            WHERE p.status != ?
              AND p.due_date < CURRENT_DATE`,
-          [PaymentStatus.PAID],
-        ),
-      ]);
+        [PaymentStatus.PAID],
+      ),
+      this.countQuery(
+        `SELECT COALESCE(SUM(total_amount), 0) AS count
+         FROM payments
+         WHERE status = ?`,
+        [PaymentStatus.PAID],
+      ),
+    ]);
 
     const [utilityBillsTotal, utilityBillsPublished, utilityBillsDraft] =
       await Promise.all([
@@ -247,6 +381,9 @@ export class DashboardService {
         paid: paymentsPaid,
         pending: paymentsPending,
         overdue: paymentsOverdue,
+      },
+      revenue: {
+        total: Number(revenue),
       },
       utilityBills: {
         total: utilityBillsTotal,
@@ -408,39 +545,44 @@ export class DashboardService {
         ),
       ]);
 
-    const [paymentsTotal, paymentsPaid, paymentsPending, paymentsOverdue] =
-      await Promise.all([
-        this.countQuery(
-          `SELECT COUNT(*) AS count
+    const [
+      paymentsTotal,
+      paymentsPaid,
+      paymentsPending,
+      paymentsOverdue,
+      revenue,
+    ] = await Promise.all([
+      this.countQuery(
+        `SELECT COUNT(*) AS count
            FROM payments p
            INNER JOIN contracts c ON c.id = p.contract_id
            INNER JOIN rooms r ON r.id = c.room_id
            INNER JOIN buildings b ON b.id = r.building_id
            WHERE b.manager_id = ?`,
-          [managerId],
-        ),
-        this.countQuery(
-          `SELECT COUNT(*) AS count
+        [managerId],
+      ),
+      this.countQuery(
+        `SELECT COUNT(*) AS count
            FROM payments p
            INNER JOIN contracts c ON c.id = p.contract_id
            INNER JOIN rooms r ON r.id = c.room_id
            INNER JOIN buildings b ON b.id = r.building_id
            WHERE b.manager_id = ?
              AND p.status = ?`,
-          [managerId, PaymentStatus.PAID],
-        ),
-        this.countQuery(
-          `SELECT COUNT(*) AS count
+        [managerId, PaymentStatus.PAID],
+      ),
+      this.countQuery(
+        `SELECT COUNT(*) AS count
            FROM payments p
            INNER JOIN contracts c ON c.id = p.contract_id
            INNER JOIN rooms r ON r.id = c.room_id
            INNER JOIN buildings b ON b.id = r.building_id
            WHERE b.manager_id = ?
              AND p.status = ?`,
-          [managerId, PaymentStatus.PENDING],
-        ),
-        this.countQuery(
-          `SELECT COUNT(*) AS count
+        [managerId, PaymentStatus.PENDING],
+      ),
+      this.countQuery(
+        `SELECT COUNT(*) AS count
            FROM payments p
            INNER JOIN contracts c ON c.id = p.contract_id
            INNER JOIN rooms r ON r.id = c.room_id
@@ -448,9 +590,19 @@ export class DashboardService {
            WHERE b.manager_id = ?
              AND p.status != ?
              AND p.due_date < CURRENT_DATE`,
-          [managerId, PaymentStatus.PAID],
-        ),
-      ]);
+        [managerId, PaymentStatus.PAID],
+      ),
+      this.countQuery(
+        `SELECT COALESCE(SUM(p.total_amount), 0) AS count
+           FROM payments p
+           INNER JOIN contracts c ON c.id = p.contract_id
+           INNER JOIN rooms r ON r.id = c.room_id
+           INNER JOIN buildings b ON b.id = r.building_id
+           WHERE b.manager_id = ?
+             AND p.status = ?`,
+        [managerId, PaymentStatus.PAID],
+      ),
+    ]);
 
     const [utilityBillsTotal, utilityBillsPublished, utilityBillsDraft] =
       await Promise.all([
@@ -616,6 +768,9 @@ export class DashboardService {
         paid: paymentsPaid,
         pending: paymentsPending,
         overdue: paymentsOverdue,
+      },
+      revenue: {
+        total: Number(revenue),
       },
       utilityBills: {
         total: utilityBillsTotal,

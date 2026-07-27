@@ -32,7 +32,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       user = await this.usersService.findOne(payload.sub);
     } catch (error) {
       if (error instanceof NotFoundException) {
-        throw new UnauthorizedException('Unauthorized');
+        throw new UnauthorizedException('Bạn chưa đăng nhập.');
       }
       throw error;
     }

@@ -104,8 +104,11 @@ export class UsersController {
   @Post()
   @Roles(UserRole.ADMIN)
   @HttpCode(201)
-  async create(@Body() createUserDto: CreateUserDto): Promise<User> {
-    return this.usersService.create(createUserDto);
+  async create(
+    @Body() createUserDto: CreateUserDto,
+    @Req() req: Request,
+  ): Promise<User> {
+    return this.usersService.create(createUserDto, req.user as any);
   }
 
   @Put(':id')

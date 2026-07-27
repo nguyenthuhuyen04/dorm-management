@@ -5,11 +5,19 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { RoomsRepository } from './rooms.repository';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { Building } from '../buildings/building.entity';
-import { Gender, RoomStatus } from '../common/enums/user-role.enum';
+import { Contract } from '../contracts/contract.entity';
+import { Student } from '../students/student.entity';
+import {
+  Gender,
+  RoomStatus,
+  ContractStatus,
+} from '../common/enums/user-role.enum';
 import { UserRole } from '../users/user.entity';
 import { Room } from './room.entity';
 
@@ -49,9 +57,32 @@ interface PublicRoomResponse {
   availableSlots: number;
 }
 
+interface AvailableRoomForChangeResponse {
+  id: number;
+  buildingId: number;
+  roomNumber: string;
+  floor: number;
+  roomType: string | null;
+  gender: Gender | null;
+  capacity: number;
+  roomFee: number;
+  status: RoomStatus;
+  createdAt: Date;
+  building: {
+    id: number;
+    buildingName: string;
+    gender: string;
+  } | null;
+  currentOccupancy: number;
+  availableSlots: number;
+}
+
 @Injectable()
 export class RoomsService {
-  constructor(private readonly roomsRepository: RoomsRepository) {}
+  constructor(
+    private readonly roomsRepository: RoomsRepository,
+    @InjectDataSource() private readonly dataSource: DataSource,
+  ) {}
 
   async findAll(
     query: FindRoomsQuery,
@@ -352,6 +383,99 @@ export class RoomsService {
     if (!(await this.canAssignStudent(roomId))) {
       throw new BadRequestException('Room is full');
     }
+  }
+
+  async getAvailableRoomsForChange(
+    currentUser: AuthenticatedUser,
+  ): Promise<AvailableRoomForChangeResponse[]> {
+    if (currentUser.role !== UserRole.STUDENT) {
+      throw new ForbiddenException('Only students can access this endpoint');
+    }
+
+    // 1. Get student from JWT userId
+    const student = await this.dataSource.manager.findOne(Student, {
+      where: { userId: currentUser.userId },
+    });
+    if (!student) {
+      throw new NotFoundException('Student not found');
+    }
+
+    // 2. Get active contract
+    const contract = await this.dataSource.manager.findOne(Contract, {
+      where: { studentId: student.id, status: ContractStatus.ACTIVE },
+      relations: ['room', 'room.building'],
+    });
+    if (!contract) {
+      throw new BadRequestException('You do not have an active contract');
+    }
+
+    const currentRoom = contract.room;
+    if (!currentRoom || !currentRoom.building) {
+      throw new NotFoundException('Current room or building not found');
+    }
+
+    const currentBuilding = currentRoom.building;
+
+    // 3. Build query for available rooms
+    const qb = this.roomsRepository
+      .createQueryBuilder('room')
+      .leftJoinAndSelect('room.building', 'building')
+      .where('room.buildingId = :buildingId', {
+        buildingId: currentBuilding.id,
+      })
+      .andWhere('room.id != :currentRoomId', {
+        currentRoomId: currentRoom.id,
+      })
+      .andWhere('room.status = :status', { status: RoomStatus.ACTIVE });
+
+    // Filter by gender if room has gender set
+    if (student.gender) {
+      qb.andWhere('(room.gender IS NULL OR room.gender = :gender)', {
+        gender: student.gender,
+      });
+    }
+
+    qb.orderBy('room.roomNumber', 'ASC');
+
+    const rooms = await qb.getMany();
+
+    // 4. Calculate occupancy for all rooms in one query
+    const roomIds = rooms.map((r) => r.id);
+    const occupancyMap =
+      await this.roomsRepository.getActiveOccupancyForRooms(roomIds);
+
+    // 5. Filter rooms with available slots and map to response
+    const availableRooms: AvailableRoomForChangeResponse[] = [];
+    for (const room of rooms) {
+      const currentOccupancy = occupancyMap.get(room.id) ?? 0;
+      const availableSlots = Math.max(room.capacity - currentOccupancy, 0);
+
+      if (availableSlots > 0) {
+        availableRooms.push({
+          id: room.id,
+          buildingId: room.buildingId,
+          roomNumber: room.roomNumber,
+          floor: room.floor,
+          roomType: room.roomType,
+          gender: room.gender,
+          capacity: room.capacity,
+          roomFee: Number(room.roomFee),
+          status: room.status,
+          createdAt: room.createdAt,
+          building: room.building
+            ? {
+                id: room.building.id,
+                buildingName: room.building.buildingName,
+                gender: room.building.gender,
+              }
+            : null,
+          currentOccupancy,
+          availableSlots,
+        });
+      }
+    }
+
+    return availableRooms;
   }
 
   private async findRoomOrThrow(roomId: number): Promise<Room> {

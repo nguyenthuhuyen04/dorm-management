@@ -92,7 +92,9 @@ export class UsersService {
 
     if (currentUser.role === UserRole.STUDENT) {
       if (targetUser.id !== currentUser.userId) {
-        throw new ForbiddenException('You can only access your own profile.');
+        throw new ForbiddenException(
+          'Bạn chỉ có thể truy cập hồ sơ của chính mình.',
+        );
       }
       return;
     }
@@ -100,7 +102,7 @@ export class UsersService {
     if (currentUser.role === UserRole.MANAGER) {
       if (targetUser.role === UserRole.ADMIN) {
         throw new ForbiddenException(
-          'You do not have permission to access this resource.',
+          'Bạn không có quyền thực hiện chức năng này.',
         );
       }
 
@@ -109,25 +111,39 @@ export class UsersService {
         targetUser.id !== currentUser.userId
       ) {
         throw new ForbiddenException(
-          'You do not have permission to access this resource.',
+          'Bạn không có quyền thực hiện chức năng này.',
         );
       }
     }
   }
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
+  async create(
+    createUserDto: CreateUserDto,
+    currentUser?: CurrentUserContext,
+  ): Promise<User> {
+    const requestedRole = createUserDto.role ?? UserRole.STUDENT;
+    if (
+      (requestedRole === UserRole.MANAGER ||
+        requestedRole === UserRole.ADMIN) &&
+      currentUser?.role !== UserRole.ADMIN
+    ) {
+      throw new ForbiddenException(
+        'Only administrators can create manager or admin accounts.',
+      );
+    }
+
     const existingEmail = await this.usersRepository.findByEmail(
       createUserDto.email,
     );
     if (existingEmail) {
-      throw new ConflictException('Email already in use');
+      throw new ConflictException('Email đã được sử dụng.');
     }
 
     const existingUsername = await this.usersRepository.findByUsername(
       createUserDto.username,
     );
     if (existingUsername) {
-      throw new ConflictException('Username already in use');
+      throw new ConflictException('Tên đăng nhập đã được sử dụng.');
     }
 
     const passwordHash = await hash(createUserDto.password, 10);
@@ -138,7 +154,7 @@ export class UsersService {
       email: createUserDto.email,
       phone: createUserDto.phone ?? null,
       password: passwordHash,
-      role: createUserDto.role ?? UserRole.STUDENT,
+      role: requestedRole,
       status: createUserDto.status ?? UserStatus.ACTIVE,
     });
 
@@ -222,7 +238,7 @@ export class UsersService {
   async findOne(id: number, currentUser?: CurrentUserContext): Promise<User> {
     const user = await this.usersRepository.findActiveUserById(id);
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('Không tìm thấy người dùng.');
     }
 
     this.validateUserAccess(user, currentUser);
@@ -244,7 +260,7 @@ export class UsersService {
         updateUserDto.email,
       );
       if (existingEmailUser && existingEmailUser.id !== id) {
-        throw new ConflictException('Email already in use');
+        throw new ConflictException('Email đã được sử dụng.');
       }
     }
 
@@ -253,7 +269,7 @@ export class UsersService {
         updateUserDto.username,
       );
       if (existingUsernameUser && existingUsernameUser.id !== id) {
-        throw new ConflictException('Username already in use');
+        throw new ConflictException('Tên đăng nhập đã được sử dụng.');
       }
     }
 
@@ -291,7 +307,7 @@ export class UsersService {
     if (updateUserDto.role !== undefined) {
       if (currentUser?.role !== UserRole.ADMIN) {
         throw new ForbiddenException(
-          'You do not have permission to update this role.',
+          'Bạn không có quyền thực hiện chức năng này.',
         );
       }
       user.role = updateUserDto.role;
@@ -320,7 +336,7 @@ export class UsersService {
 
     if (user.role === UserRole.MANAGER && user.managedBuildings?.length) {
       throw new ConflictException(
-        'Cannot delete a manager who still manages buildings.',
+        `Không thể xóa quản lý "${user.fullName || user.username}" vì người này đang quản lý ${user.managedBuildings.length} tòa nhà. Vui lòng chuyển quyền quản lý sang người khác trước khi xóa.`,
       );
     }
 

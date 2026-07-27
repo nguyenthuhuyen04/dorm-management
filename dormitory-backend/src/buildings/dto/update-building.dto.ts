@@ -7,8 +7,16 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { BuildingGender } from '../../common/enums/building-gender.enum';
+
+function normalizeGender(value: string): string {
+  if (!value) return value;
+  const upper = value.toUpperCase();
+  if (upper === 'MALE') return 'Male';
+  if (upper === 'FEMALE') return 'Female';
+  return value;
+}
 
 export class UpdateBuildingDto {
   @IsOptional()
@@ -18,6 +26,7 @@ export class UpdateBuildingDto {
   building_name?: string;
 
   @IsOptional()
+  @Transform(({ value }: { value: string }) => normalizeGender(value))
   @IsEnum(BuildingGender, {
     message: 'gender must be either Male or Female',
   })

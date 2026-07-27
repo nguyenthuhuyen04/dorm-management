@@ -103,15 +103,24 @@ export class Payment {
   })
   updatedAt!: Date;
 
-  @ManyToOne(() => Student, (student) => student.payments)
+  @ManyToOne(() => Student, (student) => student.payments, {
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  })
   @JoinColumn({ name: 'student_id' })
   student!: Student;
 
-  @ManyToOne(() => Contract, (contract) => contract.payments)
+  @ManyToOne(() => Contract, (contract) => contract.payments, {
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  })
   @JoinColumn({ name: 'contract_id' })
   contract!: Contract;
 
-  @ManyToOne(() => UtilityBill, (utilityBill) => utilityBill.payments)
+  @ManyToOne(() => UtilityBill, (utilityBill) => utilityBill.payments, {
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  })
   @JoinColumn({ name: 'utility_bill_id' })
   utilityBill!: UtilityBill;
 }
