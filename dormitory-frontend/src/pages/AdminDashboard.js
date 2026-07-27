@@ -19,8 +19,10 @@ import {
   AppstoreOutlined,
   FileTextOutlined,
   CreditCardOutlined,
-  ThunderboltOutlined,
   ArrowRightOutlined,
+  CustomerServiceOutlined,
+  WarningOutlined,
+  CheckCircleOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { dashboardService } from "../services";
@@ -71,6 +73,23 @@ function AdminDashboard() {
   }
 
   if (!data) return null;
+
+  const roomsTotal = data.rooms?.total || 0;
+  const roomsOccupied = data.rooms?.occupied || 0;
+  const roomsAvailable = data.rooms?.available || 0;
+  const roomsMaintenance = data.rooms?.maintenance || 0;
+  const occupancyRate =
+    roomsTotal > 0
+      ? Number(((roomsOccupied / roomsTotal) * 100).toFixed(1))
+      : 0;
+  const maintenanceRate =
+    roomsTotal > 0
+      ? Number(((roomsMaintenance / roomsTotal) * 100).toFixed(1))
+      : 0;
+  const availableRate =
+    roomsTotal > 0
+      ? Number(((roomsAvailable / roomsTotal) * 100).toFixed(1))
+      : 0;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -134,7 +153,7 @@ function AdminDashboard() {
                   }}
                 >
                   <span>Phòng trống</span>
-                  <strong>{data.rooms?.available || 0}</strong>
+                  <strong>{roomsAvailable}</strong>
                 </div>
                 <div
                   style={{
@@ -190,7 +209,7 @@ function AdminDashboard() {
           >
             <Statistic
               title="Phòng (Đã thuê/Trống)"
-              value={`${data.rooms?.occupied || 0}/${data.rooms?.available || 0}`}
+              value={`${roomsOccupied}/${roomsAvailable}`}
               prefix={<AppstoreOutlined style={{ color: "#fa8c16" }} />}
             />
           </Card>
@@ -241,7 +260,10 @@ function AdminDashboard() {
           <Card
             title="Hoạt động gần đây"
             extra={
-              <Button type="link" onClick={() => navigate(APP_ROUTES.SUPPORT_REQUESTS)}>
+              <Button
+                type="link"
+                onClick={() => navigate(APP_ROUTES.SUPPORT_REQUESTS)}
+              >
                 Xem tất cả
               </Button>
             }
@@ -250,19 +272,27 @@ function AdminDashboard() {
             <div style={{ display: "flex", flexDirection: "column" }}>
               {[
                 {
-                  title: "Yêu cầu hỗ trợ mới",
-                  detail: "Phòng A101 cần kiểm tra điện",
-                  time: "5 phút trước",
+                  icon: (
+                    <CustomerServiceOutlined style={{ color: "#1677ff" }} />
+                  ),
+                  bgColor: "#e6f4ff",
+                  title: "Yêu cầu hỗ trợ",
+                  detail: `${data.supportRequests?.pending || 0} yêu cầu đang chờ, ${data.supportRequests?.processing || 0} đang xử lý`,
+                  value: `Còn ${data.supportRequests?.pending || 0} chờ`,
                 },
                 {
+                  icon: <WarningOutlined style={{ color: "#fa8c16" }} />,
+                  bgColor: "#fff7e6",
                   title: "Hợp đồng sắp hết hạn",
-                  detail: "3 hợp đồng sẽ hết hạn trong tuần này",
-                  time: "20 phút trước",
+                  detail: `${data.contracts?.expired || 0} hợp đồng đã hết hạn, ${data.contracts?.active || 0} đang hoạt động`,
+                  value: `${data.contracts?.active || 0} hiệu lực`,
                 },
                 {
-                  title: "Thanh toán đã được xác nhận",
-                  detail: "2 giao dịch đã hoàn tất",
-                  time: "1 giờ trước",
+                  icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
+                  bgColor: "#f6ffed",
+                  title: "Thanh toán",
+                  detail: `${data.payments?.paid || 0} đã thanh toán, ${data.payments?.pending || 0} đang chờ, ${data.payments?.overdue || 0} quá hạn`,
+                  value: `${data.payments?.paid || 0} thành công`,
                 },
               ].map((item, idx) => (
                 <div
@@ -279,7 +309,7 @@ function AdminDashboard() {
                       width: 36,
                       height: 36,
                       borderRadius: 10,
-                      background: "#e6f4ff",
+                      background: item.bgColor,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -287,7 +317,7 @@ function AdminDashboard() {
                       flexShrink: 0,
                     }}
                   >
-                    <ThunderboltOutlined style={{ color: "#1677ff" }} />
+                    {item.icon}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 500, fontSize: 14 }}>
@@ -301,7 +331,7 @@ function AdminDashboard() {
                     type="secondary"
                     style={{ fontSize: 12, flexShrink: 0, marginLeft: 8 }}
                   >
-                    {item.time}
+                    {item.value}
                   </Text>
                 </div>
               ))}
@@ -327,10 +357,10 @@ function AdminDashboard() {
                     marginBottom: 6,
                   }}
                 >
-                  <Text>Phòng nam</Text>
-                  <Text strong>68%</Text>
+                  <Text>Phòng đã thuê</Text>
+                  <Text strong>{occupancyRate}%</Text>
                 </div>
-                <Progress percent={68} strokeColor="#1677ff" />
+                <Progress percent={occupancyRate} strokeColor="#1677ff" />
               </div>
               <div>
                 <div
@@ -340,10 +370,10 @@ function AdminDashboard() {
                     marginBottom: 6,
                   }}
                 >
-                  <Text>Phòng nữ</Text>
-                  <Text strong>82%</Text>
+                  <Text>Phòng trống</Text>
+                  <Text strong>{availableRate}%</Text>
                 </div>
-                <Progress percent={82} strokeColor="#52c41a" />
+                <Progress percent={availableRate} strokeColor="#52c41a" />
               </div>
               <div>
                 <div
@@ -354,9 +384,9 @@ function AdminDashboard() {
                   }}
                 >
                   <Text>Phòng bảo trì</Text>
-                  <Text strong>12%</Text>
+                  <Text strong>{maintenanceRate}%</Text>
                 </div>
-                <Progress percent={12} strokeColor="#fa8c16" />
+                <Progress percent={maintenanceRate} strokeColor="#fa8c16" />
               </div>
             </Space>
           </Card>

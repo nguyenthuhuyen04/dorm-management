@@ -33,14 +33,6 @@ function formatDate(dateStr) {
   });
 }
 
-function formatCurrency(value) {
-  if (value === null || value === undefined) return "—";
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-  }).format(value);
-}
-
 function MyContractPage() {
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(false);

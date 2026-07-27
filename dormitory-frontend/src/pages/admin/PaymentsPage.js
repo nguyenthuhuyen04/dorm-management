@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
   Card,
   Table,
@@ -98,6 +98,26 @@ function PaymentsPage() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form] = Form.useForm();
+
+  // Auto-calculate total_amount when fee fields change
+  const computedTotal = Form.useWatch([], form) || {};
+  const calculatedTotal = useMemo(() => {
+    const roomFee = Number(computedTotal.room_fee) || 0;
+    const electricFee = Number(computedTotal.electric_fee) || 0;
+    const waterFee = Number(computedTotal.water_fee) || 0;
+    const otherFee = Number(computedTotal.other_fee) || 0;
+    return roomFee + electricFee + waterFee + otherFee;
+  }, [
+    computedTotal.room_fee,
+    computedTotal.electric_fee,
+    computedTotal.water_fee,
+    computedTotal.other_fee,
+  ]);
+
+  // Sync computed total back to form field automatically
+  useEffect(() => {
+    form.setFieldsValue({ total_amount: calculatedTotal });
+  }, [calculatedTotal, form]);
 
   // Dashboard statistics
   const [dashboardStats, setDashboardStats] = useState(null);
@@ -306,6 +326,9 @@ function PaymentsPage() {
         return;
       }
 
+      // Use auto-calculated total to ensure consistency with backend validation
+      const totalToSend = calculatedTotal;
+
       const payload = {
         invoice_code: values.invoice_code,
         student_id: values.student_id,
@@ -317,7 +340,7 @@ function PaymentsPage() {
         electric_fee: values.electric_fee,
         water_fee: values.water_fee,
         other_fee: values.other_fee,
-        total_amount: values.total_amount,
+        total_amount: totalToSend,
         due_date: values.due_date?.toISOString?.() || values.due_date,
         payment_date:
           values.payment_date?.toISOString?.() || values.payment_date,
@@ -710,7 +733,7 @@ function PaymentsPage() {
         onOk={handleSubmit}
         okText="Lưu"
         width={700}
-        destroyOnClose
+        destroyOnHidden
         okButtonProps={{ disabled: editing?.status === "PAID" }}
       >
         <Form form={form} layout="vertical">
@@ -848,7 +871,20 @@ function PaymentsPage() {
                 label="Tổng tiền"
                 rules={[{ required: true }]}
               >
-                <InputNumber min={0} style={{ width: "100%" }} />
+                <InputNumber
+                  min={0}
+                  style={{ width: "100%" }}
+                  disabled
+                  value={calculatedTotal}
+                  addonAfter={
+                    <span style={{ fontSize: 11, whiteSpace: "nowrap" }}>
+                      = {Number(computedTotal.room_fee || 0).toLocaleString()} +{" "}
+                      {Number(computedTotal.electric_fee || 0).toLocaleString()}{" "}
+                      + {Number(computedTotal.water_fee || 0).toLocaleString()}{" "}
+                      + {Number(computedTotal.other_fee || 0).toLocaleString()}
+                    </span>
+                  }
+                />
               </Form.Item>
             </Col>
             <Col span={6}>

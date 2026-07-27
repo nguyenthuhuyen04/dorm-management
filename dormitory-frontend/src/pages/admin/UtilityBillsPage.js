@@ -24,6 +24,11 @@ import {
   ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import { utilityBillService, roomService } from "../../services";
+import {
+  canDeleteUtilityBills,
+  canManageUtilityBills,
+  getCurrentUserRole,
+} from "../../utils/permissions";
 
 const { Text } = Typography;
 
@@ -49,6 +54,10 @@ function UtilityBillsPage() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form] = Form.useForm();
+
+  const currentRole = getCurrentUserRole();
+  const canDelete = canDeleteUtilityBills(currentRole);
+  const canManage = canManageUtilityBills(currentRole);
 
   // Pagination
   const [pagination, setPagination] = useState({
@@ -332,25 +341,27 @@ function UtilityBillsPage() {
                 />
               </span>
             </Tooltip>
-            <Tooltip
-              title={
-                isPublished ? "Đã xuất bản - không thể xóa" : "Xóa hóa đơn"
-              }
-            >
-              <span>
-                <Button
-                  type="link"
-                  danger
-                  icon={<DeleteOutlined />}
-                  onClick={() => handleDelete(record)}
-                  size="small"
-                  disabled={isPublished}
-                  style={
-                    isPublished ? { opacity: 0.4, cursor: "not-allowed" } : {}
-                  }
-                />
-              </span>
-            </Tooltip>
+            {canDelete && (
+              <Tooltip
+                title={
+                  isPublished ? "Đã xuất bản - không thể xóa" : "Xóa hóa đơn"
+                }
+              >
+                <span>
+                  <Button
+                    type="link"
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => handleDelete(record)}
+                    size="small"
+                    disabled={isPublished}
+                    style={
+                      isPublished ? { opacity: 0.4, cursor: "not-allowed" } : {}
+                    }
+                  />
+                </span>
+              </Tooltip>
+            )}
           </Space>
         );
       },
@@ -361,9 +372,11 @@ function UtilityBillsPage() {
     <Card
       title="Quản lý hóa đơn tiện ích"
       extra={
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          Tạo hóa đơn
-        </Button>
+        canManage && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+            Tạo hóa đơn
+          </Button>
+        )
       }
     >
       {/* Search & Filter */}

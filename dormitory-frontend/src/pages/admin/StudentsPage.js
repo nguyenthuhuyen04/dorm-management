@@ -59,6 +59,10 @@ function StudentsPage() {
     total: 0,
   });
   const [searchText, setSearchText] = useState("");
+  const [buildingFilter, setBuildingFilter] = useState("");
+  const [roomFilter, setRoomFilter] = useState("");
+  const [courseFilter, setCourseFilter] = useState("");
+  const [genderFilter, setGenderFilter] = useState(undefined);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -75,6 +79,10 @@ function StudentsPage() {
           page,
           limit,
           search: searchText || undefined,
+          building: buildingFilter || undefined,
+          room: roomFilter || undefined,
+          course: courseFilter || undefined,
+          gender: genderFilter || undefined,
         });
         const data = response.data;
 
@@ -102,7 +110,7 @@ function StudentsPage() {
         setLoading(false);
       }
     },
-    [searchText],
+    [searchText, buildingFilter, roomFilter, courseFilter, genderFilter],
   );
 
   const loadStudentUsers = useCallback(async () => {
@@ -133,6 +141,10 @@ function StudentsPage() {
 
   const handleReset = () => {
     setSearchText("");
+    setBuildingFilter("");
+    setRoomFilter("");
+    setCourseFilter("");
+    setGenderFilter(undefined);
     setTimeout(() => fetchStudents(1, pagination.pageSize), 0);
   };
 
@@ -361,6 +373,47 @@ function StudentsPage() {
             <Button icon={<ReloadOutlined />} onClick={handleReset}>
               Reset
             </Button>
+          </Col>
+        </Row>
+        <Row gutter={12} style={{ marginTop: 12 }}>
+          <Col xs={24} sm={12} md={6}>
+            <Input
+              placeholder="Lọc theo tòa nhà"
+              value={buildingFilter}
+              onChange={(e) => setBuildingFilter(e.target.value)}
+              allowClear
+            />
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Input
+              placeholder="Lọc theo phòng"
+              value={roomFilter}
+              onChange={(e) => setRoomFilter(e.target.value)}
+              allowClear
+            />
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Input
+              placeholder="Lọc theo khóa/lớp"
+              value={courseFilter}
+              onChange={(e) => setCourseFilter(e.target.value)}
+              allowClear
+            />
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Select
+              placeholder="Lọc theo giới tính"
+              value={genderFilter}
+              onChange={setGenderFilter}
+              allowClear
+              style={{ width: "100%" }}
+            >
+              {GENDER_OPTIONS.map((item) => (
+                <Option key={item.value} value={item.value}>
+                  {item.label}
+                </Option>
+              ))}
+            </Select>
           </Col>
         </Row>
       </Card>

@@ -12,7 +12,12 @@ jest.mock("antd", () => ({
   Input: ({ children, ...props }) => <input {...props}>{children}</input>,
   Modal: ({ children, open }) => (open ? <div>{children}</div> : null),
   Row: ({ children }) => <div>{children}</div>,
-  Select: ({ children }) => <div>{children}</div>,
+  Select: Object.assign(
+    ({ children, ...props }) => <div {...props}>{children}</div>,
+    {
+      Option: ({ children, ...props }) => <div {...props}>{children}</div>,
+    },
+  ),
   Space: ({ children }) => <div>{children}</div>,
   Table: () => <div />,
   Tag: ({ children }) => <span>{children}</span>,

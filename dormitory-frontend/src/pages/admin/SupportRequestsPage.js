@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Card,
   Table,
@@ -12,6 +12,8 @@ import {
   Typography,
   message,
   Tooltip,
+  Row,
+  Col,
 } from "antd";
 import {
   EditOutlined,
@@ -40,17 +42,21 @@ function SupportRequestsPage() {
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [buildingNameFilter, setBuildingNameFilter] = useState("");
   const [form] = Form.useForm();
   const currentRole = getCurrentUserRole();
   const canManage = canManageSupportRequests(currentRole);
   const canDelete = canDeleteSupportRequests(currentRole);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const reqRes = await supportRequestService.getAll({
         page: 1,
         limit: 100,
+        category: categoryFilter || undefined,
+        buildingName: buildingNameFilter || undefined,
       });
       const payload = reqRes?.data?.data || reqRes?.data || [];
       setItems(Array.isArray(payload) ? payload : []);
@@ -59,11 +65,21 @@ function SupportRequestsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [categoryFilter, buildingNameFilter]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
+
+  const handleSearch = () => {
+    loadData();
+  };
+
+  const handleReset = () => {
+    setCategoryFilter("");
+    setBuildingNameFilter("");
+    setTimeout(() => loadData(), 0);
+  };
 
   const openEdit = (record) => {
     setEditing(record);
@@ -207,6 +223,32 @@ function SupportRequestsPage() {
         ) : null
       }
     >
+      <div style={{ marginBottom: 16 }}>
+        <Row gutter={12} align="middle">
+          <Col xs={24} sm={12} md={10}>
+            <Input
+              placeholder="Lọc theo danh mục"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              allowClear
+            />
+          </Col>
+          <Col xs={24} sm={12} md={10}>
+            <Input
+              placeholder="Lọc theo tòa nhà"
+              value={buildingNameFilter}
+              onChange={(e) => setBuildingNameFilter(e.target.value)}
+              allowClear
+            />
+          </Col>
+          <Col>
+            <Button onClick={handleSearch}>Tìm kiếm</Button>
+          </Col>
+          <Col>
+            <Button onClick={handleReset}>Reset</Button>
+          </Col>
+        </Row>
+      </div>
       <Table
         rowKey="id"
         dataSource={items}

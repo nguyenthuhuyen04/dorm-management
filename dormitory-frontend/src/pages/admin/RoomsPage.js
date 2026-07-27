@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Button,
   Card,
@@ -76,55 +82,80 @@ function RoomsPage() {
   }, []);
   const isAdmin = authUser?.role === ROLES.ADMIN;
   const isManager = authUser?.role === ROLES.MANAGER;
+  const canCreateOrEdit = isAdmin || isManager;
 
-  const fetchRooms = useCallback(
-    async (page = 1, limit = 10) => {
-      try {
-        setLoading(true);
-        setError(null);
-        const params = { page, limit };
-        if (searchText) params.search = searchText;
-        if (filterBuilding) params.building_id = filterBuilding;
-        if (filterStatus) params.status = filterStatus;
-        if (filterGender) params.gender = filterGender;
-        if (filterFloor) params.floor = filterFloor;
-        if (filterRoomType) params.room_type = filterRoomType;
+  const filterValuesRef = useRef({
+    searchText,
+    filterBuilding,
+    filterStatus,
+    filterGender,
+    filterFloor,
+    filterRoomType,
+  });
 
-        const res = await roomService.getAll(params);
-        const payload = res?.data;
-        if (Array.isArray(payload)) {
-          setRooms(payload);
-          setPagination((prev) => ({
-            ...prev,
-            current: page,
-            total: payload.length,
-          }));
-        } else {
-          setRooms(payload?.data || []);
-          setPagination({
-            current: payload?.page || page,
-            pageSize: payload?.limit || limit,
-            total: payload?.total || 0,
-          });
-        }
-      } catch (err) {
-        setError(
-          err.response?.data?.message || "Không thể tải danh sách phòng",
-        );
-        handleApiError(err, "Không thể tải danh sách phòng");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [
+  useEffect(() => {
+    filterValuesRef.current = {
       searchText,
       filterBuilding,
       filterStatus,
       filterGender,
       filterFloor,
       filterRoomType,
-    ],
-  );
+    };
+  }, [
+    searchText,
+    filterBuilding,
+    filterStatus,
+    filterGender,
+    filterFloor,
+    filterRoomType,
+  ]);
+
+  const fetchRooms = useCallback(async (page = 1, limit = 10) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const {
+        searchText: currentSearchText,
+        filterBuilding: currentFilterBuilding,
+        filterStatus: currentFilterStatus,
+        filterGender: currentFilterGender,
+        filterFloor: currentFilterFloor,
+        filterRoomType: currentFilterRoomType,
+      } = filterValuesRef.current;
+
+      const params = { page, limit };
+      if (currentSearchText) params.search = currentSearchText;
+      if (currentFilterBuilding) params.building_id = currentFilterBuilding;
+      if (currentFilterStatus) params.status = currentFilterStatus;
+      if (currentFilterGender) params.gender = currentFilterGender;
+      if (currentFilterFloor) params.floor = currentFilterFloor;
+      if (currentFilterRoomType) params.room_type = currentFilterRoomType;
+
+      const res = await roomService.getAll(params);
+      const payload = res?.data;
+      if (Array.isArray(payload)) {
+        setRooms(payload);
+        setPagination((prev) => ({
+          ...prev,
+          current: page,
+          total: payload.length,
+        }));
+      } else {
+        setRooms(payload?.data || []);
+        setPagination({
+          current: payload?.page || page,
+          pageSize: payload?.limit || limit,
+          total: payload?.total || 0,
+        });
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Không thể tải danh sách phòng");
+      handleApiError(err, "Không thể tải danh sách phòng");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const fetchBuildings = useCallback(async () => {
     try {
@@ -143,7 +174,7 @@ function RoomsPage() {
   useEffect(() => {
     fetchRooms();
     fetchBuildings();
-  }, []);
+  }, [fetchBuildings, fetchRooms]);
 
   const handleSearch = () => fetchRooms(1, pagination.pageSize);
 
@@ -378,7 +409,7 @@ function RoomsPage() {
           <Tooltip title="Xem chi tiết">
             <Button type="link" icon={<EyeOutlined />} size="small" />
           </Tooltip>
-          {(isAdmin || isManager) && (
+          {canCreateOrEdit && (
             <Tooltip title="Chỉnh sửa">
               <Button
                 type="link"
@@ -388,7 +419,7 @@ function RoomsPage() {
               />
             </Tooltip>
           )}
-          {(isAdmin || isManager) && (
+          {canCreateOrEdit && (
             <Tooltip title="Xóa">
               <Button
                 type="link"
@@ -419,7 +450,7 @@ function RoomsPage() {
                 : "Xem danh sách phòng bạn đang phụ trách quản lý."}
             </Typography.Text>
           </Col>
-          {isAdmin && (
+          {canCreateOrEdit && (
             <Col>
               <Button
                 type="primary"
@@ -587,7 +618,7 @@ function RoomsPage() {
         onCancel={handleModalCancel}
         confirmLoading={submitting}
         width={640}
-        destroyOnClose
+        destroyOnHidden
         okText="Lưu"
         cancelText="Hủy"
       >

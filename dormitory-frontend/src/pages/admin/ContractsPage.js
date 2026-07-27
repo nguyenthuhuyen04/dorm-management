@@ -9,6 +9,7 @@ import {
   Typography,
   Row,
   Col,
+  Statistic,
 } from "antd";
 import {
   PlusOutlined,
@@ -16,8 +17,11 @@ import {
   EditOutlined,
   DeleteOutlined,
   FileTextOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
 } from "@ant-design/icons";
 import * as contractService from "../../services/contractService";
+import { dashboardService } from "../../services";
 import ContractFilterBar from "../../components/contracts/ContractFilterBar";
 import ContractForm from "../../components/contracts/ContractForm";
 import ContractDetailModal from "../../components/contracts/ContractDetailModal";
@@ -53,6 +57,7 @@ function ContractsPage() {
     sortOrder: "DESC",
   });
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [contractStats, setContractStats] = useState(null);
 
   // Modal states
   const [createVisible, setCreateVisible] = useState(false);
@@ -106,8 +111,19 @@ function ContractsPage() {
     [],
   );
 
+  const loadContractStats = useCallback(async () => {
+    try {
+      const res = await dashboardService.getDashboard();
+      const stats = res?.data?.contracts;
+      setContractStats(stats || null);
+    } catch {
+      setContractStats(null);
+    }
+  }, []);
+
   useEffect(() => {
     fetchContracts(1, pagination.pageSize, filters);
+    loadContractStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -376,6 +392,39 @@ function ContractsPage() {
           >
             Tạo hợp đồng mới
           </Button>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        <Col xs={24} sm={8}>
+          <Card style={{ borderRadius: 14, background: "#f6ffed" }}>
+            <Statistic
+              title="Tổng hợp đồng"
+              value={contractStats?.total ?? "—"}
+              prefix={<FileTextOutlined style={{ color: "#52c41a" }} />}
+              valueStyle={{ fontSize: 24 }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Card style={{ borderRadius: 14, background: "#e6f7ff" }}>
+            <Statistic
+              title="Hợp đồng đang hiệu lực"
+              value={contractStats?.active ?? "—"}
+              prefix={<CheckCircleOutlined style={{ color: "#1677ff" }} />}
+              valueStyle={{ fontSize: 24 }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Card style={{ borderRadius: 14, background: "#fff7e6" }}>
+            <Statistic
+              title="Hợp đồng hết hạn"
+              value={contractStats?.expired ?? "—"}
+              prefix={<ClockCircleOutlined style={{ color: "#fa8c16" }} />}
+              valueStyle={{ fontSize: 24 }}
+            />
+          </Card>
         </Col>
       </Row>
 

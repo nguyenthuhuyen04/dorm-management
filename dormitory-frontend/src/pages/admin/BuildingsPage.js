@@ -21,7 +21,6 @@ import {
   ReloadOutlined,
   SearchOutlined,
   HomeOutlined,
-  EyeOutlined,
 } from "@ant-design/icons";
 import { buildingService, userService } from "../../services";
 import { showSuccess, handleApiError } from "../../utils/toast";

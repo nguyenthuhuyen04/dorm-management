@@ -22,14 +22,13 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   ExclamationCircleOutlined,
-  DollarOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
 import * as paymentService from "../../services/paymentService";
 import { dashboardService } from "../../services";
 import { handleApiError } from "../../utils/toast";
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 const { Option } = Select;
 
 const STATUS_MAP = {

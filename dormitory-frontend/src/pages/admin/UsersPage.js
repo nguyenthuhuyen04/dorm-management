@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Card,
   Table,
@@ -29,6 +29,7 @@ import { userRules } from "../../utils/validation";
 import LoadingState from "../../components/common/LoadingState";
 import EmptyState from "../../components/common/EmptyState";
 import RetryError from "../../components/common/RetryError";
+import { ROLES } from "../../utils/constants";
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -43,6 +44,10 @@ const STATUS_OPTIONS = [
   { value: "ACTIVE", label: "Hoạt động", color: "green" },
   { value: "INACTIVE", label: "Ngừng hoạt động", color: "default" },
 ];
+
+const editPasswordRules = userRules.password.filter(
+  (rule) => !(rule && typeof rule === "object" && rule.required === true),
+);
 
 function UsersPage() {
   const [users, setUsers] = useState([]);
@@ -65,6 +70,15 @@ function UsersPage() {
   const [submitting, setSubmitting] = useState(false);
   const [form] = Form.useForm();
   const { confirm, ConfirmDialog } = useConfirmDialog();
+
+  const authUser = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem("authUser") || "{}");
+    } catch {
+      return {};
+    }
+  }, []);
+  const isAdmin = authUser?.role === ROLES.ADMIN;
 
   const fetchUsers = useCallback(
     async (page = 1, limit = 10) => {
@@ -198,7 +212,9 @@ function UsersPage() {
 
       if (editingUser) {
         const payload = { ...values };
-        if (!payload.password) delete payload.password;
+        if (!String(payload.password || "").trim()) {
+          delete payload.password;
+        }
         await userService.update(editingUser.id, payload);
         showSuccess("Cập nhật người dùng thành công");
       } else {
@@ -275,25 +291,35 @@ function UsersPage() {
       title: "Thao tác",
       key: "action",
       width: 140,
-      render: (_, record) => (
-        <Space>
-          <Tooltip title="Chỉnh sửa">
-            <Button
-              type="link"
-              icon={<EditOutlined />}
-              onClick={() => openEditModal(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Xóa">
-            <Button
-              type="link"
-              danger
-              icon={<DeleteOutlined />}
-              onClick={() => handleDelete(record)}
-            />
-          </Tooltip>
-        </Space>
-      ),
+      render: (_, record) => {
+        return (
+          <Space>
+            {isAdmin ? (
+              <Tooltip title="Chỉnh sửa">
+                <span>
+                  <Button
+                    type="link"
+                    icon={<EditOutlined />}
+                    onClick={() => openEditModal(record)}
+                  />
+                </span>
+              </Tooltip>
+            ) : null}
+            {isAdmin ? (
+              <Tooltip title="Xóa người dùng">
+                <span>
+                  <Button
+                    type="link"
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => handleDelete(record)}
+                  />
+                </span>
+              </Tooltip>
+            ) : null}
+          </Space>
+        );
+      },
     },
   ];
 
@@ -311,15 +337,17 @@ function UsersPage() {
               quyền tạo và chỉnh sửa.
             </Typography.Text>
           </Col>
-          <Col>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={openCreateModal}
-            >
-              Tạo người dùng
-            </Button>
-          </Col>
+          {isAdmin && (
+            <Col>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={openCreateModal}
+              >
+                Tạo người dùng
+              </Button>
+            </Col>
+          )}
         </Row>
       </Card>
 
@@ -483,15 +511,24 @@ function UsersPage() {
             </Col>
           </Row>
 
-          {!editingUser && (
-            <Form.Item
-              label="Mật khẩu"
-              name="password"
-              rules={userRules.password}
-            >
-              <Input.Password placeholder="Nhập mật khẩu" />
-            </Form.Item>
-          )}
+          <Form.Item
+            label="Mật khẩu"
+            name="password"
+            rules={editingUser ? editPasswordRules : userRules.password}
+            extra={
+              editingUser
+                ? "Để trống nếu bạn không muốn đổi mật khẩu"
+                : undefined
+            }
+          >
+            <Input.Password
+              placeholder={
+                editingUser
+                  ? "Nhập mật khẩu mới (để trống nếu không đổi)"
+                  : "Nhập mật khẩu"
+              }
+            />
+          </Form.Item>
 
           <Row gutter={16}>
             <Col span={12}>
