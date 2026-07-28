@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import Login from "./Login";
+import LoginPage from "./Login";
 import { login } from "../services/authService";
 
 jest.mock("../services/authService", () => ({
@@ -10,6 +10,11 @@ jest.mock("../services/authService", () => ({
 jest.mock("../utils/toast", () => ({
   showSuccess: jest.fn(),
   handleApiError: jest.fn(),
+}));
+
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
+  useNavigate: () => jest.fn(),
 }));
 
 describe("Login", () => {
@@ -28,7 +33,7 @@ describe("Login", () => {
 
     render(
       <MemoryRouter>
-        <Login />
+        <LoginPage />
       </MemoryRouter>,
     );
 
@@ -38,7 +43,7 @@ describe("Login", () => {
         target: { value: "admin_test" },
       },
     );
-    fireEvent.change(screen.getByLabelText(/mật khẩu/i), {
+    fireEvent.change(screen.getByPlaceholderText("Mật khẩu"), {
       target: { value: "AdminTest123!" },
     });
     fireEvent.click(screen.getByRole("button", { name: /đăng nhập/i }));

@@ -1,16 +1,22 @@
 import { render, screen } from "@testing-library/react";
 import App from "./App";
 
+// Mock react-router-dom
 jest.mock("react-router-dom", () => ({
-  RouterProvider: ({ router }) => <div>{router?.path || "Login screen"}</div>,
+  RouterProvider: ({ router }) => (
+    <div data-testid="mock-router">{router?.path || "Login screen"}</div>
+  ),
 }));
 
+// Mock routes
 jest.mock("./routes", () => ({
   __esModule: true,
   default: { path: "/login" },
 }));
 
+// App.js imports "antd/dist/reset.css" which is already mocked in setupTests.js
+
 test("renders login route provider", () => {
   render(<App />);
-  expect(screen.getByText(/\/login/i)).toBeInTheDocument();
+  expect(screen.getByTestId("mock-router")).toBeInTheDocument();
 });

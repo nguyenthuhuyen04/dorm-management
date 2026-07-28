@@ -23,7 +23,7 @@ test("redirects student away from admin route", () => {
             </ProtectedRoute>
           }
         />
-        <Route path="/student" element={<div>Student page</div>} />
+        <Route path="/student/dashboard" element={<div>Student page</div>} />
       </Routes>
     </MemoryRouter>,
   );

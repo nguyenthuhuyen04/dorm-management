@@ -8,6 +8,7 @@ const { Text } = Typography;
  * Hiển thị khi không có dữ liệu với thông điệp và nút hành động tùy chỉnh
  *
  * @param {object} props
+ * @param {string} [props.title] - Tiêu đề hiển thị phía trên description
  * @param {string} [props.description="Không có dữ liệu"] - Thông điệp hiển thị
  * @param {React.ReactNode} [props.image=Empty.PRESENTED_IMAGE_SIMPLE] - Ảnh minh họa
  * @param {string} [props.actionText] - Text cho nút hành động
@@ -15,6 +16,7 @@ const { Text } = Typography;
  * @param {React.ReactNode} [props.icon] - Icon tùy chỉnh
  */
 function EmptyState({
+  title,
   description = "Không có dữ liệu",
   image = Empty.PRESENTED_IMAGE_SIMPLE,
   actionText,
@@ -35,6 +37,11 @@ function EmptyState({
         <div style={{ fontSize: 48, marginBottom: 16, color: "#bbb" }}>
           {icon}
         </div>
+      )}
+      {title && (
+        <Text strong style={{ fontSize: 16, marginBottom: 8 }}>
+          {title}
+        </Text>
       )}
       <Empty
         image={image}
