@@ -9,7 +9,16 @@ export class ContractsRepository extends Repository<Contract> {
   }
 
   async findById(id: number): Promise<Contract | null> {
-    return this.findOne({ where: { id } });
+    return this.findOne({
+      where: { id },
+      relations: [
+        'student',
+        'student.user',
+        'room',
+        'room.building',
+        'creator',
+      ],
+    });
   }
 
   async findByContractCode(contractCode: string): Promise<Contract | null> {

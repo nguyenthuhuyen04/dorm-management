@@ -17,6 +17,7 @@ import { Room } from './room.entity';
 describe('RoomsService', () => {
   let service: RoomsService;
   let repository: any;
+  let dataSource: any;
   let sampleRoom: Room;
 
   const createSampleRoom = (): Room =>
@@ -68,7 +69,13 @@ describe('RoomsService', () => {
       hasStudentAccessToRoom: jest.fn(),
     };
 
-    service = new RoomsService(repository);
+    dataSource = {
+      manager: {
+        findOne: jest.fn(),
+      },
+    };
+
+    service = new RoomsService(repository, dataSource);
   });
 
   describe('findAll', () => {
